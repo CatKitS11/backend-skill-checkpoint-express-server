@@ -290,7 +290,36 @@ app.delete("/questions/:questionId", async (req, res) => {
   }
 });
 
+app.delete("/questions/:questionId/answers", async (req, res) => {
+  try {
+    const questionIdFromClient = req.params.questionId;
 
+    const checkExistQuestion = await connectionPool.query(
+      `SELECT * FROM questions WHERE id = $1`,
+      [questionIdFromClient]
+    );
+    if (!checkExistQuestion.rows[0]) {
+      return res.status(404).json({
+        message: `Question not found. (question id: ${questionIdFromClient})`,
+      });
+    }
+
+    await connectionPool.query(`DELETE FROM answers WHERE question_id = $1`, [
+      questionIdFromClient, 
+    ]);
+
+    return res.status(200).json({
+      message: "All answers for the question have been deleted successfully. ✅",
+    });
+  } catch (err) {
+    console.error("❌ Error in DELETE /questions/:questionId/answers:", err.message);
+
+    return res.status(500).json({
+      message: "Unable to delete answers.",
+      error: err.message,
+    });
+  }
+});
 
 
 app.listen(port, () => {
