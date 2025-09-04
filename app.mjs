@@ -1,4 +1,5 @@
 import express from "express";
+import connectionPool from "./utils/db.mjs";
 
 const app = express();
 const port = 4000;
