@@ -9,9 +9,10 @@ questionsRouter.post("/", async (req, res) => {
             ...req.body,
         };
 
-        if (!newQuestion.title || !newQuestion.description || !newQuestion.category) {
+        if (!newQuestion.title || !newQuestion.description) {
             return res.status(400).json({
-                "message": "Invalid request data."
+                message: "Invalid request data.",
+                data: null,
             })
         }
 
@@ -49,12 +50,14 @@ questionsRouter.post("/:questionId/answers", async (req, res) => {
 
         if (!newAnswer.content) {
             return res.status(400).json({
-                "message": "Invalid request data."
+                message: "Invalid request data.",
+                data: null,
             })
         }
         if (newAnswer.content.length > 300) {
             return res.status(400).json({
-                message: "Answer content must not exceed 300 characters."
+                message: "Answer content must not exceed 300 characters.",
+                data: null,
             });
         }
         const checkQuestion = await connectionPool.query(
@@ -65,6 +68,7 @@ questionsRouter.post("/:questionId/answers", async (req, res) => {
         if (!checkQuestion.rows[0]) {
             return res.status(404).json({
                 message: `Question not found. (question id: ${questionIdFromClient})`,
+                data: null,
             });
         }
 
@@ -110,14 +114,15 @@ questionsRouter.get("/search", async (req, res) => {
             [title, category]
         );
         if (!results.rows[0]) {
-            return res.status(400).json({
-                message: "Invalid search parameters.",
+            return res.status(200).json({
+                message: "No questions found.",
+                data: [],
             });
         }
     } catch (error) {
         return res.status(500).json({
             message: "Unable to fetch a question.",
-            error: error.message, // ลบออกได้ถ้าไม่อยากโชว์ให้ client
+            error: error.message, // ลบออกได้ถ้าไม่อยากโชว์ให้ client 
         });
     }
 
@@ -134,10 +139,12 @@ questionsRouter.get("/", async (req, res) => {
         console.error("Database error in GET /posts:", error);
         return res.status(500).json({
             message: "Unable to fetch questions.",
+            data: null,
         });
     }
 
     return res.status(200).json({
+        message: "Questions fetched successfully",
         data: results.rows,
     });
 });
@@ -155,6 +162,7 @@ questionsRouter.get("/:questionId", async (req, res) => {
         if (!results.rows[0]) {
             return res.status(404).json({
                 message: `Question not found. (question id: ${questionIdFromClient})`,
+                data: null,
             });
         }
 
@@ -165,6 +173,7 @@ questionsRouter.get("/:questionId", async (req, res) => {
         console.error("❌ Error in GET /questions/:questionId", error.message);
         return res.status(500).json({
             message: "Unable to fetch questions.",
+            data: null,
         });
     }
 });
@@ -182,16 +191,19 @@ questionsRouter.get("/:questionId/answers", async (req, res) => {
         if (!results.rows[0]) {
             return res.status(404).json({
                 message: `Question not found. (question id: ${questionIdFromClient})`,
+                data: null,
             });
         }
 
         return res.status(200).json({
-            data: results.rows[0],
+            message: "Answers fetched successfully",
+            data: results.rows,
         });
     } catch (error) {
         console.error("❌ Error in GET /questions/:questionId/answers", error.message);
         return res.status(500).json({
             message: "Unable to fetch answers.",
+            data: null,
         });
     }
 });
@@ -206,6 +218,7 @@ questionsRouter.put("/:questionId", async (req, res) => {
         if (!updatedQuestion.title || !updatedQuestion.description || !updatedQuestion.category) {
             return res.status(400).json({
                 message: "Invalid request data.",
+                data: null,
             });
         }
 
@@ -216,6 +229,7 @@ questionsRouter.put("/:questionId", async (req, res) => {
         if (!checkExistQuestion.rows[0]) {
             return res.status(404).json({
                 message: `Question not found. (question id: ${questionIdFromClient})`,
+                data: null,
             });
         }
 
@@ -237,6 +251,12 @@ questionsRouter.put("/:questionId", async (req, res) => {
 
         return res.status(200).json({
             message: "Question updated successfully ✅",
+            data: {
+                id: questionIdFromClient,
+                title: updatedQuestion.title,
+                description: updatedQuestion.description,
+                category: updatedQuestion.category,
+            },
         });
     } catch (err) {
         console.error("❌ Error in PUT /questions/:questionId:", err.message);
@@ -258,6 +278,7 @@ questionsRouter.delete("/:questionId", async (req, res) => {
         if (!checkExistQuestion.rows[0]) {
             return res.status(404).json({
                 message: `Question not found. (question id: ${questionIdFromClient})`,
+                data: null,
             });
         }
 
@@ -266,44 +287,16 @@ questionsRouter.delete("/:questionId", async (req, res) => {
         ]);
 
         return res.status(200).json({
-            message: "Question post has been deleted successfully. ✅",
+            message: "Question post has been deleted successfully.",
+            data: {
+                id: [],
+            },
         });
     } catch (err) {
         console.error("❌ Error in DELETE /questions/:questionId:", err.message);
 
         return res.status(500).json({
             message: "Unable to delete question.",
-            error: err.message,
-        });
-    }
-});
-
-questionsRouter.delete("/:questionId/answers", async (req, res) => {
-    try {
-        const questionIdFromClient = req.params.questionId;
-
-        const checkExistQuestion = await connectionPool.query(
-            `SELECT * FROM questions WHERE id = $1`,
-            [questionIdFromClient]
-        );
-        if (!checkExistQuestion.rows[0]) {
-            return res.status(404).json({
-                message: `Question not found. (question id: ${questionIdFromClient})`,
-            });
-        }
-
-        await connectionPool.query(`DELETE FROM answers WHERE question_id = $1`, [
-            questionIdFromClient,
-        ]);
-
-        return res.status(200).json({
-            message: "All answers for the question have been deleted successfully. ✅",
-        });
-    } catch (err) {
-        console.error("❌ Error in DELETE /questions/:questionId/answers:", err.message);
-
-        return res.status(500).json({
-            message: "Unable to delete answers.",
             error: err.message,
         });
     }
