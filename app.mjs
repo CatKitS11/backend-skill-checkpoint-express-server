@@ -3,7 +3,7 @@ import connectionPool from "./utils/db.mjs";
 import questionsRouter from "./routers/questionsRouter.mjs";
 
 const app = express();
-const port = 4001;
+const port = 4000;
 
 app.use(express.json());
 app.use("/questions", questionsRouter);
